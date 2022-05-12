@@ -356,4 +356,6 @@
 
 /*#define CONFIG_AUDIO_ENABLE*/
 
+#include <configs/hi-common.h>
+
 #endif	/* __CONFIG_H */
