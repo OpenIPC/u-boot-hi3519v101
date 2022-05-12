@@ -526,15 +526,15 @@ struct spi_nand_info hifmc_spi_nand_flash_table[] = {
 		.read      = {
 			&READ_STD(1, INFINITE, 24),
 			&READ_FAST(1, INFINITE, 104),
-			&READ_DUAL(1, INFINITE, 104),
+			/*&READ_DUAL(1, INFINITE, 104),
 			&READ_DUAL_ADDR(1, INFINITE, 104),
 			&READ_QUAD(1, INFINITE, 104),
-			&READ_QUAD_ADDR(2, INFINITE, 104),
+			&READ_QUAD_ADDR(2, INFINITE, 104),*/
 			0
 		},
 		.write     = {
 			&WRITE_STD(0, 256, 24),
-			&WRITE_QUAD(0, 256, 104),
+			/*&WRITE_QUAD(0, 256, 104),*/
 			0
 		},
 		.erase     = {
