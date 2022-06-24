@@ -194,8 +194,19 @@ void set_pcie_para_hi3519v101()
 	writel(0x0, MISC_CTRL_REG_BASE + MISC_STRL33);
 }
 
+void detect_memory(void) {
+	ulong tested_ram = get_ram_size((long *)CFG_DDR_PHYS_OFFSET, CFG_DDR_SIZE)
+		/ 1024 / 1024;
+	printf("RAM size: %dMB\n", tested_ram);
+
+	char msize[128];
+	sprintf(msize, "%dM", tested_ram);
+	setenv("totalmem", msize);
+}
+
 int misc_init_r(void)
 {
+	detect_memory();
 #ifdef CONFIG_RANDOM_ETHADDR
 	random_init_r();
 #endif
