@@ -273,7 +273,11 @@ void env_relocate (void)
 		puts ("Using default environment\n\n");
 #else
 		puts ("*** Warning - bad CRC, using default environment\n\n");
+		env_crc_update();
+		saveenv();
 		show_boot_progress (-60);
+
+
 #endif
 		set_default_env();
 	}
