@@ -155,10 +155,15 @@ err_probe:
 err_crc:
 	puts("*** Warning - bad CRC, using default environment\n\n");
 
-	set_default_env();
-
-	env_crc_update();
-	saveenv();
+	if (env_ptr->crc == 0xffffffff) {
+		set_default_env();
+		puts("*** Write default environment to flash\n");
+		env_crc_update();
+		saveenv();
+	}
+	else {
+		set_default_env();
+	}
 }
 
 int sf_env_init(void)
