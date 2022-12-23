@@ -24,7 +24,7 @@
     "setnand=run mtdpartsubi; setenv bootcmd ${bootcmdubi}; saveenv; reset\0" \
     "setnor8m=run mtdpartsnor8m; setenv bootcmd ${bootcmdnor}; saveenv; reset\0" \
     "setnor16m=run mtdpartsnor16m; setenv bootcmd ${bootcmdnor}; saveenv; reset\0" \
-    "osmem=32M\0" \
+    "osmem=128M\0" \
     "soc="CONFIG_PRODUCTNAME
 
 /* env in flash instead of CFG_ENV_IS_NOWHERE */
@@ -52,6 +52,12 @@
 #define CONFIG_SYS_HUSH_PARSER 1 
 #define CONFIG_SYS_PROMPT_HUSH_PS2 " > "
 
+#define CONFIG_SYS_MALLOC_LEN      (CONFIG_ENV_SIZE + 512*1024)
+#define CONFIG_CMD_MTDPARTS 1
+#define CONFIG_RBTREE 1
+#define CONFIG_MTD_DEVICE 1
+#define CONFIG_MTD_PARTITIONS 1
+
 #define CONFIG_CLOSE_SPI_8PIN_4IO 1
 /*#define CONFIG_SD_BOOT 1*/
 #define CONFIG_SPI_BOOT 1
@@ -59,6 +65,8 @@
 #define CONFIG_CMD_TFTPPUT 1
 #define CONFIG_CMD_FAT 1
 #define CONFIG_CMD_FS_GENERIC 1
+#define CONFIG_CMD_UBI 1
+#define CONFIG_CMD_UBIFS 1
 #define CONFIG_CMD_RUN 1
 #define CONFIG_SPI_BLOCK_PROTECT 1
 #define CONFIG_NETMASK 255.255.255.0
