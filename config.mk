@@ -174,7 +174,7 @@ endif
 
 #########################################################################
 
-ifneq ($(findstring $(CROSS_COMPILE), arm-hisiv510-linux- arm-hisiv610-linux-),)
+ifneq ($(findstring $(CROSS_COMPILE), arm-hisiv510-linux- arm-hisiv610-linux- arm-himix200-linux-),)
 	PLATFORM_CPPFLAGS += -fgnu89-inline
 endif
 
