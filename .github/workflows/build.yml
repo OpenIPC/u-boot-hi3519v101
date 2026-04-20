@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [hi3516av200, hi3519v101]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache toolchain
+        id: cache-tc
+        uses: actions/cache@v4
+        with:
+          path: toolchain
+          key: arm-himix200-linux-v1
+
+      - name: Download toolchain
+        if: steps.cache-tc.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1 -R OpenIPC/toolchains \
+            -p 'arm-himix200-linux.tgz.part*'
+          cat arm-himix200-linux.tgz.part* > arm-himix200-linux.tgz
+          rm arm-himix200-linux.tgz.part*
+          mkdir -p toolchain
+          tar xzf arm-himix200-linux.tgz -C toolchain
+          tar xjf toolchain/arm-himix200-linux/arm-himix200-linux.tar.bz2 -C toolchain
+          rm arm-himix200-linux.tgz
+
+      - name: Build
+        run: |
+          export PATH="$PWD/toolchain/arm-himix200-linux/bin:$PATH"
+          make ${{ matrix.board }}_config
+          cp reg_info_${{ matrix.board }}.bin .reg
+          make CROSS_COMPILE=arm-himix200-linux- -j$(nproc)
+          make CROSS_COMPILE=arm-himix200-linux- mini-boot.bin
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: u-boot-${{ matrix.board }}-universal
+          path: mini-boot.bin
