@@ -25,6 +25,14 @@ int mtdparts_init(void);
 int id_parse(const char *id, const char **ret_id, u8 *dev_type, u8 *dev_num);
 int find_dev_and_part(const char *id, struct mtd_device **dev,
 		      u8 *part_num, struct part_info **part);
+
+static inline int str2long(char *p, ulong *num)
+{
+	char *endptr;
+
+	*num = simple_strtoul(p, &endptr, 16);
+	return (*p != '\0' && *endptr == '\0') ? 1 : 0;
+}
 #endif
 #if !(defined(CONFIG_NAND_FLASH_HISNFC100) \
 		|| defined(CONFIG_NAND_FLASH_HINFC610) \

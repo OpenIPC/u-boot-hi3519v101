@@ -12,11 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        board:
-          - hi3519v101
-          - hi3519v101_nand
-          - hi3516av200
-          - hi3516av200_nand
+        board: [hi3516av200, hi3519v101]
 
     steps:
       - name: Checkout
@@ -43,16 +39,16 @@ jobs:
           tar xjf toolchain/arm-himix200-linux/arm-himix200-linux.tar.bz2 -C toolchain
           rm arm-himix200-linux.tgz
 
-      - name: Configure
-        run: make ${{ matrix.board }}_config
-
       - name: Build
         run: |
           export PATH="$PWD/toolchain/arm-himix200-linux/bin:$PATH"
+          make ${{ matrix.board }}_config
+          cp reg_info_${{ matrix.board }}.bin .reg
           make CROSS_COMPILE=arm-himix200-linux- -j$(nproc)
+          make CROSS_COMPILE=arm-himix200-linux- mini-boot.bin
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: u-boot-${{ matrix.board }}
-          path: u-boot.bin
+          name: u-boot-${{ matrix.board }}-universal
+          path: mini-boot.bin

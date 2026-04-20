@@ -353,6 +353,24 @@ ifdef CONFIG_HI3518EV200
 endif
 endif
 
+ifeq ($(CROSS_COMPILE),arm-himix200-linux-)
+ifdef CONFIG_HI3519V101
+ifdef CONFIG_HIFMC_NAND
+	cp cmd_bootss2_v500_hi3519_nand bootss2.a -rf
+else
+	cp cmd_bootss2_v500_hi3519 bootss2.a -rf
+endif
+endif
+
+ifdef CONFIG_HI3516AV200
+ifdef CONFIG_HIFMC_NAND
+	cp cmd_bootss2_v500_hi3516av200_nand bootss2.a -rf
+else
+	cp cmd_bootss2_v500_hi3516av200 bootss2.a -rf
+endif
+endif
+endif
+
 endif #/*end CONFIG_SNAPSHOT_BOOT*/
 $(obj)env_embedded.o: $(src)env_embedded.c $(obj)../tools/envcrc
 	$(CC) $(AFLAGS) -Wa,--no-warn \
