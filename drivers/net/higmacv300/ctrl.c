@@ -1,6 +1,7 @@
 #include "util.h"
 #include "higmac.h"
 #include "ctrl.h"
+#include "mdio.h"
 
 #define CRG_GMAC			REG_ETH_CRG
 
@@ -203,8 +204,168 @@ void higmac_external_phy_reset(void)
 #endif
 }
 
+#if (defined CONFIG_ARCH_HI3519 || defined CONFIG_ARCH_HI3519V101 || defined CONFIG_ARCH_HI3559 || defined CONFIG_ARCH_HI3556 || \
+		defined CONFIG_ARCH_HI3516AV200)
+#define HIGMAC_IOCFG_ETH	(IO_CONFIG_REG_BASE + 0x140)
+#define HIGMAC_IOCFG_RGMII	0x2
+#define HIGMAC_IOCFG_RMII		0x3
+
+static void higmac_config_phy_clk(enum if_mode intf)
+{
+	unsigned long p = (unsigned long)(CRG_REG_BASE);
+	volatile unsigned int v;
+
+	v = readl(p + CRG_GMAC);
+	v &= ~BIT_EXT_PHY0_CLK_SELECT;
+	v |= PHY0_CLK_25M;
+	v |= (BIT_GMAC0_CLK_EN | BIT_GMACIF0_CLK_EN);
+	writel(v, p + CRG_GMAC);
+
+	/* soft reset MAC */
+	v = readl(p + CRG_GMAC);
+	v |= BIT_GMAC0_RST;
+	writel(v, p + CRG_GMAC);
+	udelay(100);
+	v = readl(p + CRG_GMAC);
+	v &= ~BIT_GMAC0_RST;
+	writel(v, p + CRG_GMAC);
+
+	writel(0xe, HIGMAC_DUAL_MAC_CRF_ACK_TH);
+
+	/* reset external PHY */
+	v = readl(p + CRG_GMAC);
+	v |= BIT_EXT_PHY0_RST;
+	writel(v, p + CRG_GMAC);
+	udelay(50 * 1000);
+	v = readl(p + CRG_GMAC);
+	v &= ~BIT_EXT_PHY0_RST;
+	writel(v, p + CRG_GMAC);
+	udelay(60 * 1000);
+}
+
+/* Raw MDIO read — does not need miiphy bus registration */
+static u16 higmac_raw_mdio_read(unsigned int phy_addr, unsigned int reg)
+{
+	unsigned long iobase = HIGMAC0_IOBASE;
+	unsigned int cmd;
+	int timeout = 1000;
+
+	/* wait for MDIO ready */
+	while (--timeout && (readl(iobase + REG_MDIO_SINGLE_CMD) & (1 << 20)))
+		udelay(1);
+	if (!timeout)
+		return 0xffff;
+
+	/* start read */
+	cmd = (1 << 20) | (2 << 16) | ((phy_addr & 0x1f) << 8) | (reg & 0x1f);
+	writel(cmd, iobase + REG_MDIO_SINGLE_CMD);
+
+	/* wait for completion */
+	timeout = 1000;
+	while (--timeout && (readl(iobase + REG_MDIO_SINGLE_CMD) & (1 << 20)))
+		udelay(1);
+	if (!timeout)
+		return 0xffff;
+
+	/* check data valid */
+	if (readl(iobase + REG_MDIO_RDATA_STATUS) & 1)
+		return 0xffff;
+
+	return (u16)(readl(iobase + REG_MDIO_SINGLE_DATA) >> 16);
+}
+
+/* Known RMII-only PHY IDs (upper 28 bits) */
+#define PHY_ID_KSZ8051		0x00221550
+#define PHY_ID_KSZ8081		0x00221560
+#define PHY_ID_IP101A		0x02430C50	/* IC Plus IP101A/IP101G */
+#define PHY_ID_MASK		0xFFFFFFF0
+
+static int is_rmii_phy(u32 phy_id)
+{
+	u32 id = phy_id & PHY_ID_MASK;
+
+	return id == PHY_ID_KSZ8051 ||
+	       id == PHY_ID_KSZ8081 ||
+	       id == PHY_ID_IP101A;
+}
+
+/* Read PHY ID and determine interface mode.
+ * Returns interface_mode_rmii for known RMII PHYs,
+ * interface_mode_rgmii otherwise, or interface_mode_butt if no PHY found. */
+static enum if_mode higmac_phy_probe_intf(void)
+{
+	u16 id1, id2;
+	u32 phy_id;
+
+	id1 = higmac_raw_mdio_read(higmac_board_info[0].phy_addr, 2);
+	id2 = higmac_raw_mdio_read(higmac_board_info[0].phy_addr, 3);
+
+	phy_id = ((u32)id1 << 16) | id2;
+	if (phy_id == 0 || phy_id == 0xffffffff ||
+	    phy_id == 0xffff || phy_id == 0xffff0000)
+		return interface_mode_butt; /* no PHY */
+
+	printf("PHY ID: 0x%08x\n", phy_id);
+
+	if (is_rmii_phy(phy_id))
+		return interface_mode_rmii;
+
+	return interface_mode_rgmii;
+}
+
+static void higmac_setup_intf(enum if_mode intf)
+{
+	if (intf == interface_mode_rmii)
+		writel(HIGMAC_IOCFG_RMII, HIGMAC_IOCFG_ETH);
+	else
+		writel(HIGMAC_IOCFG_RGMII, HIGMAC_IOCFG_ETH);
+	higmac_board_info[0].phy_intf = intf;
+	higmac_config_phy_clk(intf);
+}
+
+static void higmac_detect_phy_intf(void)
+{
+	char *s;
+	enum if_mode detected;
+
+	/* Check for cached setting from previous boot */
+	s = getenv("phy_intf");
+	if (s) {
+		if (!strncmp(s, "rmii", 4))
+			higmac_setup_intf(interface_mode_rmii);
+		else
+			higmac_setup_intf(interface_mode_rgmii);
+		return;
+	}
+
+	/* Init with RGMII defaults to power up MDIO bus */
+	higmac_setup_intf(interface_mode_rgmii);
+
+	/* Read PHY ID to determine interface mode */
+	detected = higmac_phy_probe_intf();
+	if (detected == interface_mode_butt) {
+		printf("No PHY detected, defaulting to RGMII\n");
+		return;
+	}
+
+	/* Apply detected mode */
+	if (detected != interface_mode_rgmii)
+		higmac_setup_intf(detected);
+
+	printf("PHY interface: %s (auto-detected)\n",
+	       detected == interface_mode_rmii ? "RMII" : "RGMII");
+	setenv("phy_intf",
+	       detected == interface_mode_rmii ? "rmii" : "rgmii");
+	saveenv();
+}
+#endif
+
 void higmac_sys_init(void)
 {
+#if (defined CONFIG_ARCH_HI3519 || defined CONFIG_ARCH_HI3519V101 || defined CONFIG_ARCH_HI3559 || defined CONFIG_ARCH_HI3556 || \
+		defined CONFIG_ARCH_HI3516AV200)
+	higmac_detect_phy_intf();
+#else
 	unsigned long p = 0;
 	volatile unsigned int v = 0;
 
@@ -259,6 +420,7 @@ void higmac_sys_init(void)
 	writel(0xe, HIGMAC_DUAL_MAC_CRF_ACK_TH);
 
 	higmac_external_phy_reset();
+#endif
 }
 
 void higmac_sys_exit(void)
