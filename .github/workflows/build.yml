@@ -15,6 +15,12 @@ jobs:
         board: [hi3516av200, hi3519v101]
 
     steps:
+      - name: Install 32-bit libs
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zlib1g:i386 libc6:i386 libstdc++6:i386
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -23,7 +29,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: toolchain
-          key: arm-himix200-linux-v1
+          key: arm-hisiv500-linux-v2
 
       - name: Download toolchain
         if: steps.cache-tc.outputs.cache-hit != 'true'
@@ -31,21 +37,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download v1 -R OpenIPC/toolchains \
-            -p 'arm-himix200-linux.tgz.part*'
-          cat arm-himix200-linux.tgz.part* > arm-himix200-linux.tgz
-          rm arm-himix200-linux.tgz.part*
+            -p 'arm-hisiv500-linux.tgz'
           mkdir -p toolchain
-          tar xzf arm-himix200-linux.tgz -C toolchain
-          tar xjf toolchain/arm-himix200-linux/arm-himix200-linux.tar.bz2 -C toolchain
-          rm arm-himix200-linux.tgz
+          tar xzf arm-hisiv500-linux.tgz -C toolchain
+          tar xjf toolchain/arm-hisiv500-linux/arm-hisiv500-linux.tar.bz2 -C toolchain
+          rm arm-hisiv500-linux.tgz
+          # Create short-name symlinks (target/bin/ has absolute symlinks that won't work)
+          cd toolchain/arm-hisiv500-linux/bin
+          for f in arm-hisiv500-linux-uclibcgnueabi-*; do
+            ln -sf "$f" "${f/-uclibcgnueabi/}"
+          done
 
       - name: Build
         run: |
-          export PATH="$PWD/toolchain/arm-himix200-linux/bin:$PATH"
+          export PATH="$PWD/toolchain/arm-hisiv500-linux/bin:$PATH"
           make ${{ matrix.board }}_config
           cp reg_info_${{ matrix.board }}.bin .reg
-          make CROSS_COMPILE=arm-himix200-linux- -j$(nproc)
-          make CROSS_COMPILE=arm-himix200-linux- mini-boot.bin
+          make CROSS_COMPILE=arm-hisiv500-linux- -j$(nproc)
+          make CROSS_COMPILE=arm-hisiv500-linux- mini-boot.bin
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
