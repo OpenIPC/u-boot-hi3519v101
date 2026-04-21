@@ -102,7 +102,7 @@
 #define FMC_TEXT_ADRS			(FMC_MEM_BASE)
 
 #define MEM_BASE_DDR			(DDR_MEM_BASE)
-#define CONFIG_SYS_MALLOC_LEN      (CONFIG_ENV_SIZE + 128*1024)
+#define CONFIG_SYS_MALLOC_LEN      (CONFIG_ENV_SIZE + 2*1024*1024)
 /* size in bytes reserved for initial data */
 #define CONFIG_SYS_GBL_DATA_SIZE   128
 
