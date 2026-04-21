@@ -51,7 +51,7 @@
 
 #define CONFIG_HI3516AV200		1
 
-#define CONFIG_SVB_ENABLE
+/* #define CONFIG_SVB_ENABLE */
 
 #define DDR_SCRAMB_ENABLE
 
