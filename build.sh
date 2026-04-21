@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 export ARCH=arm
-export CROSS_COMPILE=${CROSS_COMPILE:-arm-himix200-linux-}
+export CROSS_COMPILE=${CROSS_COMPILE:-arm-hisiv500-linux-}
 
 OUTPUTDIR="${OUTPUTDIR:-.}"
 SOCS="hi3516av200 hi3519v101"
