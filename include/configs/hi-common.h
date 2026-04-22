@@ -28,14 +28,20 @@
     "soc="CONFIG_PRODUCTNAME
 
 /* env in flash instead of CFG_ENV_IS_NOWHERE */
-#ifndef CONFIG_XM_COMPATIBLE
+#ifndef CONFIG_ENV_OFFSET
+#  ifndef CONFIG_XM_COMPATIBLE
     #define CONFIG_ENV_OFFSET       0x40000      /* environment starts here */
-#else
+#  else
     #define CONFIG_ENV_OFFSET       0x30000      /* environment starts here */
+#  endif
 #endif
 
+#ifndef CONFIG_ENV_SIZE
 #define CONFIG_ENV_SIZE         0x10000
+#endif
+#ifndef CONFIG_ENV_SECT_SIZE
 #define CONFIG_ENV_SECT_SIZE        0x10000
+#endif
 
 #undef CONFIG_SYS_PROMPT
 #define CONFIG_SYS_PROMPT	"OpenIPC # "
