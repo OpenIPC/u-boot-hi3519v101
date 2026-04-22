@@ -12,5 +12,5 @@ for soc in ${SOCS}; do
 	cp reg_info_${soc}.bin .reg
 	make -j$(nproc)
 	make mini-boot.bin
-	cp mini-boot.bin "${OUTPUTDIR}/u-boot-${soc}-universal.bin"
+	dd if=mini-boot.bin of="${OUTPUTDIR}/u-boot-${soc}-universal.bin" bs=1M conv=sync 2>/dev/null
 done
