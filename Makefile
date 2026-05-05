@@ -3945,6 +3945,7 @@ clean:	ddr_training.clean
 clobber:	clean
 	@find $(OBJTREE) -type f \( -name .depend \
 		-o -name '*.srec' -o -name '*.bin' -o -name u-boot.img \) \
+		! -name 'reg_info_*.bin' \
 		-print0 \
 		| xargs -0 rm -f
 	@rm -f $(OBJS) $(obj)*.bak $(obj)ctags $(obj)etags $(obj)TAGS \
