@@ -64,6 +64,22 @@ jobs:
           name: u-boot-${{ matrix.board }}-universal
           path: u-boot-${{ matrix.board }}-universal.bin
 
+  # Publish job — common failure modes:
+  #   "GH_TOKEN environment variable required" / empty token: secret
+  #     FIRMWARE_RELEASE_TOKEN is missing or unreadable (e.g. PR from a fork
+  #     can't see secrets). Set with:
+  #       gh secret set FIRMWARE_RELEASE_TOKEN -R OpenIPC/u-boot-hi3519v101
+  #   401 Bad credentials: PAT expired (fine-grained max is 1 year) or
+  #     revoked. Mint a new fine-grained PAT and update the secret.
+  #   403 Forbidden / "Resource not accessible by personal access token":
+  #     PAT lacks Contents: read+write on OpenIPC/firmware, or its repo
+  #     selector doesn't include OpenIPC/firmware.
+  #   404 Not Found on `gh release upload latest`: the `latest` tag was
+  #     deleted in OpenIPC/firmware. Recreate it (`gh release create
+  #     latest -R OpenIPC/firmware --title Latest`) before retrying.
+  #   "test -f $f" exits non-zero: the build job didn't produce the
+  #     expected artifact name. Check matrix board values and the dd step
+  #     in the build job.
   publish:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
