@@ -96,8 +96,24 @@ jobs:
           GH_TOKEN: ${{ secrets.FIRMWARE_RELEASE_TOKEN }}
         run: |
           set -eu
+          # Releases API occasionally returns 502/503 ("Unicorn!" page).
+          # Retry with backoff: 10s, 20s, 30s, 40s — total ~100s before
+          # giving up. Auth/scope errors (401/403) won't recover with a
+          # retry but we don't bother distinguishing; they fail the same
+          # way after exhausting attempts.
+          upload() {
+            local f="$1" i
+            for i in 1 2 3 4 5; do
+              if gh release upload latest "$f" --clobber -R OpenIPC/firmware; then
+                return 0
+              fi
+              [ "$i" = "5" ] && return 1
+              echo "upload attempt $i failed; sleeping $((i*10))s" >&2
+              sleep $((i*10))
+            done
+          }
           for soc in hi3516av200 hi3519v101; do
             f="artifacts/u-boot-${soc}-universal/u-boot-${soc}-universal.bin"
             test -f "$f"
-            gh release upload latest "$f" --clobber -R OpenIPC/firmware
+            upload "$f"
           done
