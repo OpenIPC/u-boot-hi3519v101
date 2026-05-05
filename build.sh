@@ -12,5 +12,11 @@ for soc in ${SOCS}; do
 	cp reg_info_${soc}.bin .reg
 	make -j$(nproc)
 	make mini-boot.bin
-	dd if=mini-boot.bin of="${OUTPUTDIR}/u-boot-${soc}-universal.bin" bs=1M conv=sync 2>/dev/null
+	# hi3516av200 ships unpadded; defib pads to NAND erase-block size
+	# before flashing. hi3519v101 stays 1 MiB-padded.
+	if [ "${soc}" = "hi3516av200" ]; then
+		cp mini-boot.bin "${OUTPUTDIR}/u-boot-${soc}-universal.bin"
+	else
+		dd if=mini-boot.bin of="${OUTPUTDIR}/u-boot-${soc}-universal.bin" bs=1M conv=sync 2>/dev/null
+	fi
 done
