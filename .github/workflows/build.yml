@@ -55,9 +55,32 @@ jobs:
           cp reg_info_${{ matrix.board }}.bin .reg
           make CROSS_COMPILE=arm-hisiv500-linux- -j$(nproc)
           make CROSS_COMPILE=arm-hisiv500-linux- mini-boot.bin
+          dd if=mini-boot.bin of=u-boot-${{ matrix.board }}-universal.bin \
+             bs=1M conv=sync 2>/dev/null
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: u-boot-${{ matrix.board }}-universal
-          path: mini-boot.bin
+          path: u-boot-${{ matrix.board }}-universal.bin
+
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload to OpenIPC/firmware latest release
+        env:
+          GH_TOKEN: ${{ secrets.FIRMWARE_RELEASE_TOKEN }}
+        run: |
+          set -eu
+          for soc in hi3516av200 hi3519v101; do
+            f="artifacts/u-boot-${soc}-universal/u-boot-${soc}-universal.bin"
+            test -f "$f"
+            gh release upload latest "$f" --clobber -R OpenIPC/firmware
+          done
